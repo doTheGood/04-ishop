@@ -1,44 +1,44 @@
-import axios from 'axios'
-import { GetStaticPaths, GetStaticProps } from 'next'
-import Image from 'next/future/image'
-import Head from 'next/head'
-import { useState } from 'react'
-import Stripe from 'stripe'
-import { stripe } from '../../lib/stripe'
+import axios from 'axios';
+import { GetStaticPaths, GetStaticProps } from 'next';
+import Image from 'next/future/image';
+import Head from 'next/head';
+import { useState } from 'react';
+import Stripe from 'stripe';
+import { stripe } from '../../lib/stripe';
 import {
   ImageContainer,
   ProductContainer,
   ProductDetails,
-} from '../../styles/pages/product'
+} from '../../styles/pages/product';
 
 interface IProductProps {
   product: {
-    id: string
-    name: string
-    imageUrl: string
-    price: string
-    description: string
-    defaultPriceId: string
-  }
+    id: string;
+    name: string;
+    imageUrl: string;
+    price: string;
+    description: string;
+    defaultPriceId: string;
+  };
 }
 
 export default function Product({ product }: IProductProps) {
   const [isCreatingCheckoutSession, setIsCreatingCheckoutSession] =
-    useState(false)
+    useState(false);
 
   async function handleBuyProduct() {
     try {
-      setIsCreatingCheckoutSession(true)
+      setIsCreatingCheckoutSession(true);
       const response = await axios.post('/api/checkout', {
         priceId: product.defaultPriceId,
-      })
+      });
 
-      const { checkoutUrl } = response.data
+      const { checkoutUrl } = response.data;
 
-      window.location.href = checkoutUrl
+      window.location.href = checkoutUrl;
     } catch (err) {
-      setIsCreatingCheckoutSession(false)
-      alert('Falha ao redirecionar o checkout!')
+      setIsCreatingCheckoutSession(false);
+      alert('Falha ao redirecionar o checkout!');
     }
   }
 
@@ -64,26 +64,26 @@ export default function Product({ product }: IProductProps) {
         </ProductDetails>
       </ProductContainer>
     </>
-  )
+  );
 }
 
 export const getStaticPaths: GetStaticPaths = async () => {
   return {
     paths: [{ params: { id: 'prod_MQlroaCIej4YZX' } }],
     fallback: 'blocking',
-  }
-}
+  };
+};
 
 export const getStaticProps: GetStaticProps<any, { id: string }> = async ({
   params,
 }) => {
-  const productId = params.id
+  const productId = params.id;
 
   const product = await stripe.products.retrieve(productId, {
     expand: ['default_price'],
-  })
+  });
 
-  const price = product.default_price as Stripe.Price
+  const price = product.default_price as Stripe.Price;
 
   return {
     props: {
@@ -100,5 +100,5 @@ export const getStaticProps: GetStaticProps<any, { id: string }> = async ({
       },
     },
     revalidate: 60 * 60 * 1, // 1 hour
-  }
-}
+  };
+};
