@@ -1,6 +1,9 @@
 import * as Dialog from '@radix-ui/react-dialog';
+import axios from 'axios';
 import Image from 'next/future/image';
 import { X } from 'phosphor-react';
+import { useState } from 'react';
+import { useCart } from '../../hooks/useCarts';
 import { CartButton } from '../CartButton';
 import {
   CartClose,
@@ -13,6 +16,33 @@ import {
 } from './styles';
 
 export function Cart() {
+  const { cartItems, removeCartItem, cartTotalPrice } = useCart();
+  const cartQuantity = cartItems.length;
+
+  const formattedCartTotal = new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: 'EUR',
+  }).format(cartTotalPrice);
+
+  const [isCreatingCheckoutSession, setIsCreatingCheckoutSession] =
+    useState(false);
+
+  async function handleCheckout() {
+    try {
+      setIsCreatingCheckoutSession(true);
+      const response = await axios.post('/api/checkout', {
+        products: cartItems,
+      });
+      const { checkoutUrl } = response.data;
+      window.location.href = checkoutUrl;
+    } catch (err) {
+      setIsCreatingCheckoutSession(false);
+      alert(
+        'The checkout is currently not working, please try again in few minutes. Sorry for the inconvenient.  '
+      );
+    }
+  }
+
   return (
     <Dialog.Root>
       <Dialog.Trigger asChild>
@@ -26,37 +56,48 @@ export function Cart() {
           </CartClose>
           <h2>Sacola de compras</h2>
           <section>
-            {/* <p>Parece que seu carrinho está vazio 😕 </p> */}
+            {cartQuantity <= 0 && <p>Parece que seu carrinho está vazio 😕 </p>}
 
-            <CartProduct>
-              <CartProductImage>
-                <Image
-                  width={100}
-                  height={93}
-                  alt=""
-                  src="https://s3-alpha-sig.figma.com/img/387d/13ce/de131bd1ccf9bbe6b2331e88d3df20cd?Expires=1665964800&Signature=eRip5zM0xcid60KsBVoA1e4VB9XM-2rtr1wfN5UGqzM0y0if6NDCIF4f8n62xOO~JCuQnCZ5k~xx-C1XgCbXs4luHdzfhBOQhUmqfxMNfwf61i8rsboFeGPvKF5qJWYNLSiRq05KwWvIDB6LZysA4FN86fAsbN0ytJ~s0yxlWjZmxFxr46B9842Na1j-OZR2wYlR6F~6ctfaPXtSZajM-Eubd6D34fQFKKuZ2m6Jp4JVBBPHhQODonL6xWTIP0TW6lNMRaALapIhGeafIjHxxJ-GnnF4FF5JFjeCKo8y4v8dS46f9Ft4JxOYKq8TNxaxrJJHthYSo1SzCGGg3pcR0A__&Key-Pair-Id=APKAINTVSUGEWH5XD5UA"
-                />
-              </CartProductImage>
-              <CartProductDetails>
-                <p>Produto 1</p>
-                <strong>R$ 50.00</strong>
-                <button>Remover</button>
-              </CartProductDetails>
-            </CartProduct>
+            {cartItems.map((cartItem) => (
+              <CartProduct key={cartItem.id}>
+                <CartProductImage>
+                  <Image
+                    width={100}
+                    height={93}
+                    alt=""
+                    src={cartItem.imageUrl}
+                  />
+                </CartProductImage>
+                <CartProductDetails>
+                  <p>{cartItem.name}</p>
+                  <strong>{cartItem.price}</strong>
+                  <button onClick={() => removeCartItem(cartItem.id)}>
+                    Remover
+                  </button>
+                </CartProductDetails>
+              </CartProduct>
+            ))}
           </section>
 
           <CartFinalization>
             <FinalizationDetails>
               <div>
                 <span>Quantidade</span>
-                <p>2 itens</p>
+                <p>
+                  {cartQuantity} {cartQuantity === 1 ? 'item' : 'itens'}
+                </p>
               </div>
               <div>
                 <span>Valor total</span>
-                <p>R$ 100.00</p>
+                <p>{formattedCartTotal}</p>
               </div>
             </FinalizationDetails>
-            <button>Finalizar compra</button>
+            <button
+              onClick={handleCheckout}
+              disabled={isCreatingCheckoutSession || cartQuantity <= 0}
+            >
+              Finalizar compra
+            </button>
           </CartFinalization>
         </CartContent>
       </Dialog.Portal>
