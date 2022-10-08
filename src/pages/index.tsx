@@ -8,22 +8,40 @@ import Link from 'next/link';
 import Head from 'next/head';
 import useEmblaCarousel from 'embla-carousel-react';
 import { CartButton } from '../components/CartButton';
+import { IProduct } from '../contexts/CartContext';
+import { useCart } from '../hooks/useCarts';
+import { MouseEvent, useEffect, useState } from 'react';
+import { ProductSkeleton } from '../components/ProductSkeleton';
 
 interface IHomeProps {
-  products: {
-    id: string;
-    name: string;
-    imageUrl: string;
-    price: number;
-  }[];
+  products: IProduct[];
 }
 
 export default function Home({ products }: IHomeProps) {
+  const [isLoading, setIsLoading] = useState(true);
+
   const [emblaRef] = useEmblaCarousel({
     align: 'start',
     skipSnaps: false,
     dragFree: true,
   });
+
+  useEffect(() => {
+    //fake loading to use the skeleton loading from figma
+    const timeOut = setTimeout(() => setIsLoading(false), 2000);
+
+    return () => clearTimeout(timeOut);
+  }, []);
+
+  const { addToCart, checkIfItemAlreadyExists } = useCart();
+
+  function handleAddToCart(
+    event: MouseEvent<HTMLButtonElement>,
+    product: IProduct
+  ) {
+    event.preventDefault();
+    addToCart(product);
+  }
 
   return (
     <>
@@ -34,31 +52,48 @@ export default function Home({ products }: IHomeProps) {
         <HomeContainer>
           <div className="embla" ref={emblaRef}>
             <SliderContainer className="embla__container container">
-              {products.map((product) => {
-                return (
-                  <Link
-                    key={product.id}
-                    href={`product/${product.id}`}
-                    prefetch={false}
-                  >
-                    <Product className="embla__slide">
-                      <Image
-                        src={product.imageUrl}
-                        width={520}
-                        height={480}
-                        alt=""
-                      />
-                      <footer>
-                        <div>
-                          <strong>{product.name}</strong>
-                          <span>{product.price}</span>
-                        </div>
-                        <CartButton color="green" size="large" />
-                      </footer>
-                    </Product>
-                  </Link>
-                );
-              })}
+              {isLoading ? (
+                <>
+                  <ProductSkeleton className="embla__slide" />
+                  <ProductSkeleton className="embla__slide" />
+                  <ProductSkeleton className="embla__slide" />
+                </>
+              ) : (
+                <>
+                  {products.map((product) => {
+                    return (
+                      <Link
+                        key={product.id}
+                        href={`product/${product.id}`}
+                        prefetch={false}
+                      >
+                        <Product className="embla__slide">
+                          <Image
+                            src={product.imageUrl}
+                            width={520}
+                            height={480}
+                            alt=""
+                          />
+                          <footer>
+                            <div>
+                              <strong>{product.name}</strong>
+                              <span>{product.price}</span>
+                            </div>
+                            <CartButton
+                              color="green"
+                              size="large"
+                              disabled={checkIfItemAlreadyExists(product.id)}
+                              onClick={(event) =>
+                                handleAddToCart(event, product)
+                              }
+                            />
+                          </footer>
+                        </Product>
+                      </Link>
+                    );
+                  })}
+                </>
+              )}
             </SliderContainer>
           </div>
         </HomeContainer>
@@ -83,6 +118,8 @@ export const getStaticProps: GetStaticProps = async () => {
         style: 'currency',
         currency: 'EUR',
       }).format(price.unit_amount / 100),
+      numberPrice: price.unit_amount / 100,
+      defaultPriceId: price.id,
     };
   });
 
